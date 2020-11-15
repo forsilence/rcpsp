@@ -7,6 +7,8 @@
 # include<iostream>
 # include<vector>
 
+namespace _M_th
+{
 // line in text
 class line_handler
 {
@@ -35,10 +37,14 @@ class text_loader
 {
     public:
         typedef std::size_t row_no_t;
-        typedef std::map<row_no_t,std::string> KV_t;
-        typedef std::pair<KV_t::key_type,std::string> KVE_t;
-        typedef std::map<std::string , std::vector<row_no_t> > words_map_t;
-        typedef std::pair<std::string , std::vector<row_no_t> > words_map_e_t;
+        typedef std::map<   row_no_t,
+                            std::string> KV_t;
+        typedef std::pair<  KV_t::key_type,
+                            std::string> KVE_t;
+        typedef std::map<   std::string , 
+                            std::vector<row_no_t> > words_map_t;
+        typedef std::pair<  std::string ,
+                            std::vector<row_no_t> > words_map_e_t;
         text_loader()=default;
         text_loader(std::string &text_path);
         text_loader(std::ifstream &infile);
@@ -84,4 +90,5 @@ class text_handler
         kv_t no_line_map;
         words_map_t word_line_no;
 };
+} // namespace _M_th
 # endif

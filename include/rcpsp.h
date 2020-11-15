@@ -2,6 +2,8 @@
 # define _RCPSP_H
 # include<vector>
 # include<cstdlib>
+# include<map>
+# include<unordered_map>
 # include"text_handler.h"
 
 namespace RCPSP
@@ -16,14 +18,17 @@ class job
         typedef unsigned int duration_t;
         typedef unsigned int mode_t;
         typedef unsigned int resource_t;
-        typedef std::map<resource_t , size_type> resource_bulk_t;
-        typedef std::pair<resource_t , size_type> resource_elem_t;
+        typedef std::map<   resource_t ,
+                            size_type> resource_bulk_t;
+        typedef std::pair<  resource_t ,
+                            size_type> resource_elem_t;
 
         job()=default;
         job(number_t J_nb,
             std::vector<number_t> Ss
             ):  job_nb(J_nb),
-                successors(Ss){}
+                successors(Ss),
+                required_resources(){}
         job(number_t J_nb,
             size_type Modes_size,
             size_type Ss_size,
@@ -56,12 +61,15 @@ class job
         void set_duration(duration_t dura) { duration = dura; }
         resource_bulk_t get_required_resources() const { return required_resources; }
         void set_required_resources(resource_bulk_t rrs) { required_resources = rrs; }
+        void set_predecessors(std::vector<number_t> pdcs) { predecessors = pdcs; }
+        std::vector<number_t> get_predecessors() const { return predecessors; }
 
         std::ostream& print(std::ostream& );
 
     private:
         number_t job_nb;// 号码
         std::vector<number_t> successors;
+        std::vector<number_t> predecessors;
         std::vector<mode_t> modes;
         mode_t cur_mode;
         duration_t duration;
@@ -83,9 +91,26 @@ class infor_loader
         no_job_t::iterator begin_of_jobs();
         no_job_t::iterator end_of_jobs();
         no_job_t get_all_jobs_map() const { return jobs; }
+        job::resource_bulk_t get_resources() const { return limited_resources; }
+        void update_resources(job::resource_bulk_t rss);
     private:
-        text_handler text_h;
+        _M_th::text_handler text_h;
         std::map<job::number_t,job> jobs;
+        job::resource_bulk_t limited_resources;
+};
+
+// priority-based encoding gene
+class priorityBG
+{
+    public:
+        typedef int priority_t;
+        typedef std::vector<priority_t> gene_link_t;
+
+        priority_t& operator[](size_t loc) { return _M_gene[loc]; }
+        size_t size() { return _M_gene.size(); }
+        void push_back(priority_t p) { _M_gene.push_back(p); }
+    private:
+        gene_link_t _M_gene;
 };
 
 class job_scheduled_infor
@@ -113,20 +138,55 @@ class job_scheduled_infor
 class ssgs
 {
     public:
+        typedef std::vector<priorityBG> population_t;
+        typedef std::vector<job::number_t> topological_sort_rt;// result type
+        typedef std::multimap<job::number_t,job::number_t> cut_set_t;// 割集 multimap -> to store 1 key multi times
+        typedef std::pair<job::number_t,job::number_t> cut_set_elem_t;
         ssgs() = default;
         ssgs(std::string project_file_path);
 
-        void scheduling(std::string project_file_path);
-        void update_decision_set();
+        void init(std::string project_file_path);
+        std::vector<job::number_t> topological_sort(priorityBG);
+        infor_loader::no_job_t get_all_jobs() const { return all_jobs; }
+        job::resource_bulk_t get_resources() const { return resources_set; }
+        bool eligible(  infor_loader::no_job_t sorted_nodes,
+                        job j);
+        bool eligible(  infor_loader::no_job_t sorted_nodes,
+                        infor_loader::no_job_t free_nodes,
+                        job::number_t no);
+        cut_set_t& update_cut_set(   infor_loader::no_job_t sorted_nodes,
+                                    cut_set_t& cut_set);
+        void update_cut_set_partial(    infor_loader::no_job_t sorted_node,
+                                        cut_set_t& cut_set,
+                                        job::number_t cur_job);
+        job::number_t max_priority( infor_loader::no_job_t pr_quene,
+                                    priorityBG gene) const ;
+        void update_priority_nodes(infor_loader::no_job_t sorted_nodes,
+                                    cut_set_t cut_set,
+                                    infor_loader::no_job_t& free_nodes,
+                                    infor_loader::no_job_t& priority_quene);
+        job_scheduled_infor evaluate(   infor_loader::no_job_t topological_sort_result,
+                                        priorityBG gene);
     private:
-        infor_loader::no_job_t init_group_map;
-        infor_loader::no_job_t scheduled_set;
-        infor_loader::no_job_t decision_set;
-        job::resource_bulk_t resources_set;
-        job_scheduled_infor js_infor;
+        infor_loader::no_job_t all_jobs;// all the jobs in the project
+        job::resource_bulk_t resources_set;// limited resources
+        priorityBG best_result;//
 };
 // void ssgs(std::string project_file_path);
 void psgs();
+
+// test 
+class test
+{
+    public:
+        static void infor_loader_test();
+        static void priorityBG_test();
+        static void ssgs_test();
+        static void ssgs_update_cut_set_test();
+        static void unordered_map_test();
+        static void topological_sort_test();
+};
 } // namespace RCPSP
+
 
 # endif

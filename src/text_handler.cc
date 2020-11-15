@@ -2,6 +2,10 @@
 # include<sstream>
 # include<fstream>
 # include<iostream>
+namespace _M_th
+{
+    
+
 text_loader::text_loader(std::string& text_path)
 {
     load(text_path);
@@ -149,3 +153,4 @@ std::vector<std::string> text_handler::split_line_to_words(std::string line)
     line_handler lh(line);
     return lh.get_words();
 }
+} // namespace _M_th
