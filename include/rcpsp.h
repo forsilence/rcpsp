@@ -76,7 +76,7 @@ class job
         resource_bulk_t required_resources;
 };
 
-// information loader
+// >>>information loader<<<
 class infor_loader
 {
     public:
@@ -86,6 +86,8 @@ class infor_loader
         infor_loader() = default;
         infor_loader(std::string path);
 
+        void load_dot_sm_file(std::string );
+        void load_dot_RCP_file(std::string );
         size_t size_of_jobs() const { return jobs.size(); }
         no_job_t::iterator find_job_by_no(job::number_t);
         no_job_t::iterator begin_of_jobs();
@@ -99,25 +101,13 @@ class infor_loader
         job::resource_bulk_t limited_resources;
 };
 
-// priority-based encoding gene
-class priorityBG
-{
-    public:
-        typedef int priority_t;
-        typedef std::vector<priority_t> gene_link_t;
-
-        priority_t& operator[](size_t loc) { return _M_gene[loc]; }
-        size_t size() { return _M_gene.size(); }
-        void push_back(priority_t p) { _M_gene.push_back(p); }
-    private:
-        gene_link_t _M_gene;
-};
-
+// >>>job_scheduled_infor<<<
 class job_scheduled_infor
 {
     public:
-        typedef unsigned int date_type;
+        typedef double date_type;
 
+        void set_no(job::number_t no_) { no = no_; }
         void set_es(date_type es) { earliest_start = es; }
         void set_ef(date_type ef) { earliest_finish = ef; }
         void set_ls(date_type ls) { latest_start = ls; }
@@ -127,6 +117,7 @@ class job_scheduled_infor
         date_type get_ef() const { return earliest_finish; }
         date_type get_ls() const { return latest_start; }
         date_type get_lf() const { return latest_finish; }
+        void print(std::ostream&);
     private:
         date_type earliest_start;// 最早开始时间
         date_type earliest_finish;// 最早结束时间
@@ -134,7 +125,44 @@ class job_scheduled_infor
         date_type latest_finish;// 最晚结束时间
         job::number_t no;
 };
-// serial/parallel schedule generation scheme
+// >>>time_line<<<
+class time_line
+{
+    public:
+        typedef std::vector<time_line> time_bulk_t;
+        typedef job_scheduled_infor::date_type date_type;
+        time_line() = default;
+        time_line(date_type st,date_type et):start_time(st),end_time(et){}
+        void set_st(date_type st_) { start_time = st_; }
+        void set_et(date_type et_) { end_time = et_; }
+        date_type get_st() const { return start_time; }
+        date_type get_et() const { return end_time; }
+    private:
+        date_type start_time;
+        date_type end_time;
+};
+// >>>priority-based encoding gene<<<
+class priorityBG
+{
+    public:
+        typedef int priority_t;
+        typedef std::vector<priority_t> gene_link_t;
+
+        priority_t& operator[](size_t loc) { return _M_gene[loc]; }
+        size_t size() { return _M_gene.size(); }
+        void push_back(priority_t p) { _M_gene.push_back(p); }
+        static void set_max(priority_t m) { max = m; }
+        void set_result(time_line::date_type r) { result=r; }
+        time_line::date_type get_result() const { return result; }
+        static priority_t max;
+    private:
+        gene_link_t _M_gene;
+        time_line::date_type result;
+};
+// >>>declare evaluate result<<<
+class evaluate_result_t;
+// >>>serial/parallel schedule generation scheme<<<
+// >>>ssgs<<<
 class ssgs
 {
     public:
@@ -142,6 +170,7 @@ class ssgs
         typedef std::vector<job::number_t> topological_sort_rt;// result type
         typedef std::multimap<job::number_t,job::number_t> cut_set_t;// 割集 multimap -> to store 1 key multi times
         typedef std::pair<job::number_t,job::number_t> cut_set_elem_t;
+        typedef std::map<job::resource_t,time_line::time_bulk_t> res_time_t;
         ssgs() = default;
         ssgs(std::string project_file_path);
 
@@ -165,14 +194,70 @@ class ssgs
                                     cut_set_t cut_set,
                                     infor_loader::no_job_t& free_nodes,
                                     infor_loader::no_job_t& priority_quene);
-        job_scheduled_infor evaluate(   infor_loader::no_job_t topological_sort_result,
+        // job_scheduled_infor evaluate(   std::vector<job::number_t> topological_sort_result,
+        //                                 priorityBG gene);
+        evaluate_result_t evaluate(   std::vector<job::number_t> topological_sort_result,
                                         priorityBG gene);
+        void set_time(  infor_loader::no_job_t all_jobs__,
+                        std::map<job::number_t,job_scheduled_infor> schedule_infor,
+                        job_scheduled_infor& jsi,
+                        res_time_t& res_sl);
+        time_line::date_type objective_function(priorityBG gene);
+        void convert_objective_val_to_adaptive_val(
+                                            std::vector<time_line::date_type>& ,
+                                            time_line::date_type );
+        void ssgs_sort( size_t pop_size,
+                        priorityBG::priority_t max,
+                        double ,
+                        double ,
+                        int );
+        population_t init_pop(  size_t pop_size,
+                                priorityBG::priority_t max);
+        void pop_sort(population_t& );
+        bool gene_cmp(priorityBG , priorityBG );
+        bool adaptive_cmp(priorityBG ,priorityBG ,population_t );
+        population_t select_parents(population_t pop);
+        population_t::value_type crossover(population_t parents,double crossover_rate);
+        void mutate(priorityBG& ind,double mutate_rate,int neighborhood_with = 4);
+        int roulette_wheel(std::vector<time_line::date_type> );
+        void add_children_to_pop(population_t& pop,population_t::value_type c);
+        void add_children_to_pop(population_t& pop,population_t c);
+        double get_rand_val_0_to_1();
+
+        // quik_sort_for_pop_sort
+        int quik_sort_partition(population_t& pop,
+                                std::vector<time_line::date_type>& val_ls,
+                                int first,
+                                int end);
+        void quik_sort(population_t& pop,
+                        std::vector<time_line::date_type>& val_ls,
+                        int first,
+                        int end);
+        
     private:
         infor_loader::no_job_t all_jobs;// all the jobs in the project
         job::resource_bulk_t resources_set;// limited resources
         priorityBG best_result;//
 };
 // void ssgs(std::string project_file_path);
+// >>>evaluate result<<<
+class evaluate_result_t
+{
+    public:
+        evaluate_result_t(job_scheduled_infor jsi_,
+                            ssgs::res_time_t rtl,
+                            std::map<job::number_t,
+                                        job_scheduled_infor> si
+                            ):  jsi(jsi_),
+                                resources_time_line(rtl),
+                                scheduled_infor(si){}
+        job_scheduled_infor get_jsi() const { return jsi; }
+        void print(std::ostream&);
+    private:
+        job_scheduled_infor jsi;
+        ssgs::res_time_t resources_time_line;
+        std::map<job::number_t,job_scheduled_infor> scheduled_infor;
+};
 void psgs();
 
 // test 
@@ -185,8 +270,13 @@ class test
         static void ssgs_update_cut_set_test();
         static void unordered_map_test();
         static void topological_sort_test();
+        static void iterator_test();
+        static void condition_test();
+        static void evaluate_test();
+        static void quik_sort_test();
+        static void select_parents_test();
+        static void ssgs_sort_test();
 };
 } // namespace RCPSP
-
 
 # endif
