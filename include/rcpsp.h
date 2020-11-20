@@ -271,6 +271,7 @@ class evaluate_result_t
                                 scheduled_infor(si){}
         job_scheduled_infor get_jsi() const { return jsi; }
         void print(std::ostream&);
+        std::string scheduled_infor_to_string();
     private:
         job_scheduled_infor jsi;
         ssgs::res_time_t resources_time_line;

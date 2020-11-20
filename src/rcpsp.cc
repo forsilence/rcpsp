@@ -272,6 +272,19 @@ void evaluate_result_t::print(std::ostream& print_out)
     for(auto it:scheduled_infor)
         it.second.print(print_out);
 }
+// scheduled_infor_to_string
+// @return std::string
+std::string evaluate_result_t::scheduled_infor_to_string()
+{
+    std::string str;
+    for(std::pair<job::number_t,job_scheduled_infor> it:scheduled_infor)
+    {
+        str +=  "[job-]"+std::to_string(it.first) +
+                std::to_string(it.second.get_es()) + "-" +
+                std::to_string(it.second.get_ef()) ;
+    }
+    return str;
+}
 // >>> ssgs <<<
 // @arg std::string
 ssgs::ssgs(std::string project_file_path):ssgs()
@@ -639,6 +652,13 @@ time_line::date_type ssgs::objective_function(priorityBG gene)
     evaluate_result_t er = evaluate(topological_sort_result,gene);
     return er.get_jsi().get_ef();
 }
+
+// ssgs_sort
+// @arg size_t
+// @arg int
+// @arg double
+// @arg double
+// @arg priorityBG::priority_t
 void ssgs::ssgs_sort(   size_t pop_size=20,
                         int generation_size=20,
                         double crossover_rate = 0.1,
@@ -651,7 +671,8 @@ void ssgs::ssgs_sort(   size_t pop_size=20,
     population_t pop = init_pop(pop_size,max);
     for(int i=0;i<generation_size;i++)
     {
-        log.wirte_in(std::string("->>generation: ")+ std::to_string(i+1) +" <<-");
+        print_line(i+1,generation_size);
+        log.wirte_in(std::string("->>generation : ")+ std::to_string(i+1) +" <<-");
         for(int j=0;j<5;j++)
         {
             population_t crossover_parents = select_parents(pop);
@@ -667,12 +688,9 @@ void ssgs::ssgs_sort(   size_t pop_size=20,
                 population_t::iterator tmp_iter = pop.begin();
                 pop.erase(tmp_iter);
             }
-            // std::cout << "generation "<< i << "-> in loop:" << j << std::endl;
-            // std::cout << "best result:" << best_result.get_result() << std::endl;
-            log.wirte_in( "generation "+std::to_string(i+1)+"-> in loop:" + std::to_string(j));
-            log.wirte_in("best result:"+std::to_string(best_result.get_result()));
         }
-        print_line(i+1,generation_size);
+        log.wirte_in("best_result_gene_val:"+std::to_string(best_result.get_result()));
+        log.wirte_in("best_result_gene :"+best_result.to_string());
     }
 }
 
@@ -698,13 +716,7 @@ ssgs::population_t ssgs::init_pop(  size_t pop_size,
     }
     pop_sort(pop);
     best_result = *pop.rbegin();
-    log.wirte_in("best result:"+best_result.to_string());
-    std::string tmp_str;
-    for(auto it:pop)
-        // std::cout << it.get_result() << " " ;
-        tmp_str+=std::to_string(it.get_result())+" ";
-    log.wirte_in(tmp_str);
-    // std::cout << std::endl;
+    log.wirte_in("best_result_gene:"+best_result.to_string());
     return pop;
 }
 // convert objective value to adaptive value
@@ -738,14 +750,12 @@ void ssgs::pop_sort(population_t& pop)
         pop_objective_val_ls.push_back(it.get_result());
     convert_objective_val_to_adaptive_val(pop_objective_val_ls);
     quik_sort(pop,pop_objective_val_ls,0,pop.size()-1);
-    // val list log
-    std::string log_str;
-    for(int i=0;i<pop_objective_val_ls.size();i++)
-        log_str+=std::to_string(pop_objective_val_ls[i])+" ";
-    log.wirte_in(log_str);
-    // std::cout << std::endl;
     best_result = *pop.rbegin();
-    log.wirte_in("best result:"+best_result.to_string());
+    // >>log<<
+    std::string log_str;
+    for(time_line::date_type it:pop_objective_val_ls)
+        log_str += std::to_string(it)+" ";
+    log.wirte_in(log_str);
 }
 // quik sort
 int ssgs::quik_sort_partition(  population_t& pop,
