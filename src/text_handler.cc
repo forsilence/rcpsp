@@ -2,6 +2,7 @@
 # include<sstream>
 # include<fstream>
 # include<iostream>
+# include<ctime>
 namespace _M_th
 {
     
@@ -18,6 +19,10 @@ text_loader::text_loader(std::ifstream& infile)
 void text_loader::load(std::ifstream& infile)
 {
     clear();
+    if(!infile.good()){
+        std::cerr << "file not exit" << std::endl;
+        exit(1);
+    }
     // std::ifstream infile(text_path);
     row_no_t row_no = 1;
     std::string line ;
@@ -38,6 +43,10 @@ void text_loader::load(std::ifstream& infile)
 void text_loader::load(std::string& text_path)
 {
     std::ifstream infile(text_path);
+    if(!infile.good()) {
+        std::cerr << "file " << text_path << " not exist!" << std::endl;
+        exit(1);
+    }
     load(infile);
 }
 
@@ -152,5 +161,78 @@ std::vector<std::string> text_handler::split_line_to_words(std::string line)
 {
     line_handler lh(line);
     return lh.get_words();
+}
+
+// >>> text_writer <<<
+text_writer::text_writer(std::string file):text_writer()
+                        {
+                            set_file(file);
+                        }
+
+// set_file
+void text_writer::set_file(std::string name)
+{
+    while(true)
+    {
+        size_t tmp = name.find(" ");
+        if(tmp = std::string::npos) break;
+        else if(tmp=0) name = name.substr(1,name.size()-1);
+        else if(tmp=name.size()-1) name = name.substr(0,name.size()-1);
+        else
+        {
+            std::cerr << "file can not have \" \" , you should set name as consecutive char!" << std::endl;
+            exit(1);
+        }
+    }
+    file_name = name;
+}
+
+// wirte_in
+// @arg std::string
+void text_writer::wirte_in(std::string text)
+{
+    if(buffer_pool.size()>=buffer_size)
+        in_to_file();
+    buffer_pool.push_back(text);
+}
+// destructor
+text_writer::~text_writer()
+{
+    if(!file_name.empty())
+        in_to_file();
+}
+// in_to_file (write buffer_pool into file)
+void text_writer::in_to_file()
+{
+    std::ofstream outfile;
+    if(file_name.empty())
+    {
+        std::cerr << "You have not set the file to write in,please set the file!" << std::endl;
+        exit(1);
+    }
+    outfile.open(file_name,std::ofstream::app);
+    for(buffer_type it:buffer_pool)
+        outfile << it << std::endl;
+    outfile.close();
+    buffer_pool.clear();
+}
+
+// >>> test <<<
+void test::text_writer_test()
+{
+    srand((unsigned)time(NULL));
+    std::cout << ">>> text_writer test <<<" << std::endl;
+    text_writer tw("text_writer_test");
+    std::string str_table("abc defg hijklmnopqrstuvwxyzABCDEFJHIJKLMNOPQRSTU VWXYZ ");
+    for(int i=0;i<40;i++)
+    {
+        std::string tmp;
+        for(std::string::value_type it:str_table)
+        if(rand()/10 > 5)
+            tmp.push_back(it);
+        std::cout << tmp <<std::endl;
+        tw.wirte_in(tmp);
+    }
+    std::cout << ">>> end of text_writer test <<<" << std::endl;
 }
 } // namespace _M_th

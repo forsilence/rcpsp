@@ -90,5 +90,32 @@ class text_handler
         kv_t no_line_map;
         words_map_t word_line_no;
 };
+// text_writer
+class text_writer
+{
+    public:
+        typedef std::string buffer_type;
+        typedef std::vector<buffer_type> buffer_bulk_t;
+        text_writer():buffer_size(20),file_name(),buffer_pool(){}
+        text_writer(std::string file);
+        ~text_writer();
+
+        void open();
+        void set_file(std::string name);
+        void wirte_in(std::string );
+        void in_to_file();
+        void set_buffer_size(size_t b_size) { buffer_size = b_size; }
+    private:
+        std::string file_name;
+        buffer_bulk_t buffer_pool;
+        size_t buffer_size;
+};
+
+// test
+class test
+{
+    public:
+        static void text_writer_test();
+};
 } // namespace _M_th
 # endif
