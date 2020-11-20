@@ -132,14 +132,21 @@ class time_line
         typedef std::vector<time_line> time_bulk_t;
         typedef job_scheduled_infor::date_type date_type;
         time_line() = default;
-        time_line(date_type st,date_type et):start_time(st),end_time(et){}
+        time_line(  date_type st,
+                    date_type et
+                    ):  start_time(st),
+                        end_time(et),
+                        holding_resources_size(0){}
         void set_st(date_type st_) { start_time = st_; }
         void set_et(date_type et_) { end_time = et_; }
         date_type get_st() const { return start_time; }
         date_type get_et() const { return end_time; }
+        void set_holding_resource_size(size_t s) { holding_resources_size = s; }
+        size_t get_holding_resource_size() const { return holding_resources_size; }
     private:
         date_type start_time;
         date_type end_time;
+        size_t holding_resources_size;
 };
 // >>>priority-based encoding gene<<<
 class priorityBG
@@ -148,12 +155,15 @@ class priorityBG
         typedef int priority_t;
         typedef std::vector<priority_t> gene_link_t;
 
+        priorityBG() = default;
+        priorityBG(const priorityBG &);
         priority_t& operator[](size_t loc) { return _M_gene[loc]; }
         size_t size() { return _M_gene.size(); }
         void push_back(priority_t p) { _M_gene.push_back(p); }
         static void set_max(priority_t m) { max = m; }
         void set_result(time_line::date_type r) { result=r; }
         time_line::date_type get_result() const { return result; }
+        std::string to_string();
         static priority_t max;
     private:
         gene_link_t _M_gene;
@@ -173,6 +183,7 @@ class ssgs
         typedef std::map<job::resource_t,time_line::time_bulk_t> res_time_t;
         ssgs() = default;
         ssgs(std::string project_file_path);
+        ssgs(std::string project_file_path,std::string log_file_path);
 
         void init(std::string project_file_path);
         std::vector<job::number_t> topological_sort(priorityBG);
@@ -206,18 +217,19 @@ class ssgs
         void convert_objective_val_to_adaptive_val(
                                             std::vector<time_line::date_type>& ,
                                             time_line::date_type );
-        void ssgs_sort( size_t pop_size,
-                        priorityBG::priority_t max,
+        void ssgs_sort( size_t ,
+                        int ,
                         double ,
                         double ,
-                        int );
+                        priorityBG::priority_t);
         population_t init_pop(  size_t pop_size,
                                 priorityBG::priority_t max);
         void pop_sort(population_t& );
         bool gene_cmp(priorityBG , priorityBG );
         bool adaptive_cmp(priorityBG ,priorityBG ,population_t );
         population_t select_parents(population_t pop);
-        population_t::value_type crossover(population_t parents,double crossover_rate);
+        population_t crossover(population_t parents,double crossover_rate);
+        population_t crossover_2(population_t parents,double crossover_rate);
         void mutate(priorityBG& ind,double mutate_rate,int neighborhood_with = 4);
         int roulette_wheel(std::vector<time_line::date_type> );
         void add_children_to_pop(population_t& pop,population_t::value_type c);
@@ -234,10 +246,16 @@ class ssgs
                         int first,
                         int end);
         
+        // log file
+        void set_log_file(std::string log_file);
+        // void write_in(std::string log_infor);
+        void set_log_buffer_size(size_t buffer_size);
+        void write_in(std::string str) { log.wirte_in(str);}
     private:
         infor_loader::no_job_t all_jobs;// all the jobs in the project
         job::resource_bulk_t resources_set;// limited resources
         priorityBG best_result;//
+        _M_th::text_writer log;// log writer
 };
 // void ssgs(std::string project_file_path);
 // >>>evaluate result<<<
@@ -275,7 +293,7 @@ class test
         static void evaluate_test();
         static void quik_sort_test();
         static void select_parents_test();
-        static void ssgs_sort_test();
+        static void ssgs_sort_test(std::string);
 };
 } // namespace RCPSP
 
