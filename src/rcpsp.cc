@@ -46,7 +46,7 @@ infor_loader::infor_loader(std::string path):
     std::string file_type_dot_sm = ".sm";
     std::string file_type_dot_RCP = ".RCP";
     std::string::iterator dot_loc  = path.end();
-    for(;dot_loc!=path.end();dot_loc--)
+    for(;dot_loc!=path.begin();dot_loc--)
         if(*dot_loc == file_type_dot_RCP[0])
             break;
     if(std::equal(dot_loc,path.end(),file_type_dot_sm.begin()))
@@ -159,9 +159,59 @@ void infor_loader::load_dot_sm_file(std::string path)
 // load .RCP file
 void infor_loader::load_dot_RCP_file(std::string path)
 {
-    std::cout << "not write yet" << std::endl;
-    exit(1);
 	// jobs-size limited-resources-size
+    _M_th::text_handler::kv_t::iterator row_iterator = text_h.get_line_by_no(1);
+    std::istringstream line(row_iterator->second);
+    size_t jobs_size ;
+    size_t limited_resources_size;
+    line >> jobs_size >> limited_resources_size;
+    std::cout << "limited resources size :" << limited_resources_size << std::endl;
+    // limited-resource-size
+    size_t limited_resource_size;
+    row_iterator = text_h.get_line_by_no(2);
+    std::istringstream line_2(row_iterator->second);
+    job::resource_t res_no = 1;
+    for(int i=0;i<limited_resources_size;i++) 
+    {
+        line_2 >> limited_resource_size;
+        limited_resources.emplace(i+1,limited_resource_size);
+    }
+    // loading job information
+    std::map<job::number_t,std::vector<job::number_t>> predecessors;
+    for(int i=0;i<jobs_size;i++)
+    {
+        predecessors.clear();
+        row_iterator = text_h.get_line_by_no(3+i);
+        std::istringstream row_line(row_iterator->second);
+        job::duration_t duration;// duration
+        row_line >> duration ;
+        job::resource_bulk_t required_res;
+        required_res.clear();
+        for(int j=0;j<limited_resources_size; j++)//required-resources
+        {
+            row_line >> limited_resource_size;
+            required_res.emplace(j+1,limited_resource_size);
+        }
+        // successors
+        // predecessors-store
+        size_t successors_size ;
+        row_line >> successors_size;
+        std::vector<job::number_t> successors;
+        job::number_t suc;
+        while(row_line >> suc) 
+        {
+            successors.push_back(suc);
+            predecessors[suc].push_back(i+1);
+        }
+        job new_job(i+1,successors);
+        new_job.set_duration(duration);
+        new_job.set_cur_mode(1);
+        new_job.set_required_resources(required_res);
+        jobs.emplace(i+1,new_job);
+    }
+    // set predecessors
+    for(auto it:predecessors)
+        jobs[it.first].set_predecessors(it.second);
 }
 
 // @arg job::number_t
@@ -1062,5 +1112,18 @@ void test::ssgs_sort_test(std::string path)
                 " ,mutate-rate :"+ std::to_string(mutate_rate));
     s.ssgs_sort(pop_size,generation_size,crossover_rate,mutate_rate);
     std::cout << ">>> end of ssgs_sort test <<<" << std::endl;
+}
+void test::load_dot_RCP_file_test()
+{
+    std::cout << ">>> load .RCP file test <<<" << std::endl;
+    ssgs s("src/J301_1.RCP");
+    std::ofstream ofile;
+    ofile.open("load_dot_RCP_file_test",std::ofstream::ate);
+    for(auto it:s.get_all_jobs())
+        it.second.print(ofile);
+    for(auto it:s.get_resources())
+        ofile << "resource " << it.first << " size " << it.second << std::endl;
+    ofile.close();
+    std::cout << ">>> end of test <<<" << std::endl;
 }
 } // namespace RCPSP

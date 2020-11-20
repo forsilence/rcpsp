@@ -68,7 +68,7 @@ void text_loader::clear()
     number_line_map.clear();
     word_line_no.clear();
 }
-// get line by number
+// get line by number:start by 1
 text_loader::KV_t::iterator text_loader::get_line_by_no(text_loader::row_no_t no)
 {
     return number_line_map.find(no);

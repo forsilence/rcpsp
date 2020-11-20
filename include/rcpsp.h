@@ -294,6 +294,7 @@ class test
         static void quik_sort_test();
         static void select_parents_test();
         static void ssgs_sort_test(std::string);
+        static void load_dot_RCP_file_test();
 };
 } // namespace RCPSP
 
