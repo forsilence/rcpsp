@@ -66,7 +66,7 @@ void infor_loader::load_dot_sm_file(std::string path)
     _M_th::text_handler::row_no_t first_row_no_of_jobs = rows_of_jobs[0];
     _M_th::text_handler::kv_t::iterator line_of_word_jobs_iterator = text_h.get_line_by_no(first_row_no_of_jobs);
     _M_th::line_handler lh(line_of_word_jobs_iterator->second);
-    job::size_type jobs_size = std::atoi(lh.last()->c_str());
+    job::size_type jobs_size = std::atoi(lh.last()->c_str());//>>>jobs-size
 
     _M_th::text_handler::row_no_bulk_t rows_of_word_jobnr = text_h.find_word_row_no("jobnr.");
     _M_th::text_handler::kv_t::iterator iterator_start_by_word_jobnr = text_h.get_line_by_no(rows_of_word_jobnr[0]);
@@ -165,7 +165,6 @@ void infor_loader::load_dot_RCP_file(std::string path)
     size_t jobs_size ;
     size_t limited_resources_size;
     line >> jobs_size >> limited_resources_size;
-    std::cout << "limited resources size :" << limited_resources_size << std::endl;
     // limited-resource-size
     size_t limited_resource_size;
     row_iterator = text_h.get_line_by_no(2);
@@ -180,7 +179,6 @@ void infor_loader::load_dot_RCP_file(std::string path)
     std::map<job::number_t,std::vector<job::number_t>> predecessors;
     for(int i=0;i<jobs_size;i++)
     {
-        predecessors.clear();
         row_iterator = text_h.get_line_by_no(3+i);
         std::istringstream row_line(row_iterator->second);
         job::duration_t duration;// duration
@@ -1116,7 +1114,7 @@ void test::ssgs_sort_test(std::string path)
 void test::load_dot_RCP_file_test()
 {
     std::cout << ">>> load .RCP file test <<<" << std::endl;
-    ssgs s("src/J301_1.RCP");
+    ssgs s("j30rcp/J301_1.RCP");
     std::ofstream ofile;
     ofile.open("load_dot_RCP_file_test",std::ofstream::ate);
     for(auto it:s.get_all_jobs())
@@ -1124,6 +1122,13 @@ void test::load_dot_RCP_file_test()
     for(auto it:s.get_resources())
         ofile << "resource " << it.first << " size " << it.second << std::endl;
     ofile.close();
+    std::cout << ">>> end of test <<<" << std::endl;
+}
+void test::ssgs_sort_dot_RCP_file_test()
+{
+    std::cout << ">>> ssgs_sort .RCP file test <<<" << std::endl;
+    ssgs s("j30rcp/j301_1.RCP","test.RCP");
+    s.ssgs_sort();
     std::cout << ">>> end of test <<<" << std::endl;
 }
 } // namespace RCPSP
