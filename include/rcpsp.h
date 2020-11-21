@@ -222,6 +222,11 @@ class ssgs
                         double ,
                         double ,
                         priorityBG::priority_t);
+        void ssgs_sort_2( size_t ,
+                        int ,
+                        double ,
+                        double ,
+                        priorityBG::priority_t);
         population_t init_pop(  size_t pop_size,
                                 priorityBG::priority_t max);
         void pop_sort(population_t& );

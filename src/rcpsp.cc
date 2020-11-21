@@ -279,7 +279,7 @@ std::string evaluate_result_t::scheduled_infor_to_string()
     std::string str;
     for(std::pair<job::number_t,job_scheduled_infor> it:scheduled_infor)
     {
-        str +=  "[job-]"+std::to_string(it.first) +
+        str +=  "[job-"+std::to_string(it.first)+ "]" +
                 std::to_string(it.second.get_es()) + "-" +
                 std::to_string(it.second.get_ef()) ;
     }
@@ -675,8 +675,10 @@ void ssgs::ssgs_sort(   size_t pop_size=20,
         log.wirte_in(std::string("->>generation : ")+ std::to_string(i+1) +" <<-");
         for(int j=0;j<5;j++)
         {
+            // crossover
             population_t crossover_parents = select_parents(pop);
             population_t children = crossover_2(crossover_parents,crossover_rate);
+            // mutate
             for(population_t::value_type c:children)
             {
                 mutate(c,mutate_rate,6);
@@ -693,7 +695,52 @@ void ssgs::ssgs_sort(   size_t pop_size=20,
         log.wirte_in("best_result_gene :"+best_result.to_string());
     }
 }
-
+// ssgs-sort version 0.2
+// change between last version: 
+//   -->delete individual after a generation 
+//   -->apative mutate-rate
+// @arg size_t
+// @arg int
+// @arg double
+// @arg double
+// @arg priorityBG::priority_t
+void ssgs::ssgs_sort_2(   size_t pop_size=20,
+                        int generation_size=20,
+                        double crossover_rate = 0.1,
+                        double mutate_rate = 0.1,
+                        priorityBG::priority_t max=10
+                        )
+{
+    print_line(0,generation_size);
+    srand((unsigned)time(NULL));
+    population_t pop = init_pop(pop_size,max);
+    for(int i=0;i<generation_size;i++)
+    {
+        // adaptive mutate-rate
+        print_line(i+1,generation_size);
+        log.wirte_in(std::string("->>generation : ")+ std::to_string(i+1) +" <<-");
+        for(int j=0;j<5;j++)
+        {
+            // crossover
+            population_t crossover_parents = select_parents(pop);
+            population_t children = crossover_2(crossover_parents,crossover_rate);
+            // mutate
+            for(population_t::value_type c:children)
+            {
+                mutate(c,mutate_rate,6);
+                add_children_to_pop(pop,c);
+            }
+        }
+        pop_sort(pop);
+        for(int i=0; i<pop.size()-pop_size ; i++)
+        {
+            population_t::iterator tmp_iter = pop.begin();
+            pop.erase(tmp_iter);
+        }
+        log.wirte_in("best_result_gene_val:"+std::to_string(best_result.get_result()));
+        log.wirte_in("best_result_gene :"+best_result.to_string());
+    }
+}
 // init population(old version!)
 // @arg size_t
 // @return ssgs::population_t
