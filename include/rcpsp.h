@@ -199,6 +199,9 @@ class ssgs
         void update_cut_set_partial(    infor_loader::no_job_t sorted_node,
                                         cut_set_t& cut_set,
                                         job::number_t cur_job);
+        cut_set_t& update_cut_set(infor_loader::no_job_t sorted_node,
+                                    cut_set_t& cut_set,
+                                    job::number_t job_no);
         job::number_t max_priority( infor_loader::no_job_t pr_quene,
                                     priorityBG gene) const ;
         void update_priority_nodes(infor_loader::no_job_t sorted_nodes,
@@ -282,8 +285,14 @@ class evaluate_result_t
         ssgs::res_time_t resources_time_line;
         std::map<job::number_t,job_scheduled_infor> scheduled_infor;
 };
-void psgs();
-
+// >>>psgs<<<
+class psgs
+{
+    public:
+        psgs()=default;
+    private:
+        ;
+};
 // test 
 class test
 {

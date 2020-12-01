@@ -70,7 +70,7 @@ void infor_loader::load_dot_sm_file(std::string path)
 
     _M_th::text_handler::row_no_bulk_t rows_of_word_jobnr = text_h.find_word_row_no("jobnr.");
     _M_th::text_handler::kv_t::iterator iterator_start_by_word_jobnr = text_h.get_line_by_no(rows_of_word_jobnr[0]);
-    job::number_t job_no=0;//
+    job::number_t job_no=0;// job number
     job::size_type mode_size;
     job::size_type su_size;
     job::number_t su;//successors
@@ -110,10 +110,9 @@ void infor_loader::load_dot_sm_file(std::string path)
                 if( std::find(
                         store_pred_iter->second.begin(),
                         store_pred_iter->second.end(),
-                        job_no)
-                    == 
+                        job_no) == 
                     store_pred_iter->second.end())
-                    store_pred_iter->second.push_back(job_no);
+                            store_pred_iter->second.push_back(job_no);
         }
         job new_job(job_no,tmp_sus);
         jobs.insert(no_job_elem_t(job_no,new_job));
@@ -279,9 +278,9 @@ std::string evaluate_result_t::scheduled_infor_to_string()
     std::string str;
     for(std::pair<job::number_t,job_scheduled_infor> it:scheduled_infor)
     {
-        str +=  "[job-"+std::to_string(it.first)+ "]" +
+        str +=  " "+std::to_string(it.first)+ "-" +
                 std::to_string(it.second.get_es()) + "-" +
-                std::to_string(it.second.get_ef()) ;
+                std::to_string(it.second.get_ef())+"\n" ;
     }
     return str;
 }
@@ -318,7 +317,7 @@ std::vector<job::number_t> ssgs::topological_sort(priorityBG gene)
     sorted_nodes.emplace(job_iterator->first, job_iterator->second);
     PS.push_back(job_iterator->first);
     free_nodes.erase(job_iterator);
-    // init priority quene
+    // init priority quene (there was just one job-> <job 1>)
     infor_loader::no_job_t priority_quene;
     for(job::number_t it:sorted_nodes.begin()->second.get_successors())
     {
@@ -328,20 +327,25 @@ std::vector<job::number_t> ssgs::topological_sort(priorityBG gene)
     }
     // init cur set 
     cut_set_t cut_set;
-    update_cut_set(sorted_nodes,cut_set);
+    // update_cut_set(sorted_nodes,cut_set);
+    update_cut_set(sorted_nodes,cut_set,PS[0]);
     // core of topological sort
     int count = 1;
     while(sorted_nodes.size() != gene.size())
     {
+        // get the max priority of job in priority quene
         job::number_t max_pr_job = max_priority(priority_quene,gene);
         infor_loader::no_job_t::iterator job_iterator_in_loop = priority_quene.find(max_pr_job);
+        // push the job with max priority into sorted_node
         if(job_iterator_in_loop != priority_quene.end())
         {
             sorted_nodes.emplace(max_pr_job,job_iterator_in_loop->second);
             PS.push_back(max_pr_job);
             priority_quene.erase(job_iterator_in_loop);
         }
-        update_cut_set(sorted_nodes,cut_set);
+        // update cut-set && priority-nodes
+        // update_cut_set(sorted_nodes,cut_set);
+        update_cut_set(sorted_nodes,cut_set,PS[PS.size()-1]);
         size_t cut_set_size = cut_set.size();
         update_priority_nodes(sorted_nodes,cut_set,free_nodes,priority_quene);
     }
@@ -377,6 +381,7 @@ bool ssgs::eligible(    infor_loader::no_job_t sorted_nodes,
 ssgs::cut_set_t& ssgs::update_cut_set(   infor_loader::no_job_t sorted_nodes,
                                         cut_set_t& cut_set)
 {
+    // this version looks like a little bit slow!!
     cut_set.clear();// necessary?
     // start at the first nodes(dummy job)
     update_cut_set_partial( sorted_nodes,
@@ -413,7 +418,31 @@ void ssgs::update_cut_set_partial( infor_loader::no_job_t sorted_nodes,
         for(job::number_t it:successors)
             cut_set.emplace(job_iterator->first,it);
 }
-
+// update_cut_set new version
+// @param infor_loader::no_job_t
+// @param cut_set_t& 
+// @job::number_t
+// @return ssgs::cut_set_t
+ssgs::cut_set_t& ssgs::update_cut_set(infor_loader::no_job_t sorted_nodes,
+                                cut_set_t& cut_set,
+                                job::number_t job_no)
+{
+    std::vector<job::number_t> predecessors = sorted_nodes.at(job_no).get_predecessors();
+    std::vector<job::number_t> successors   = sorted_nodes.at(job_no).get_successors();
+    cut_set_t::iterator delete_iter;
+    // delete cut_set element that not exist!
+    for( int pre=0 ; pre<predecessors.size() ; pre++ ){
+        delete_iter = cut_set.find(predecessors[pre]);
+        if (delete_iter != cut_set.end()){
+            cut_set.erase(delete_iter);
+        }
+    }
+    // add new element to cut_set
+    for(int suc=0 ; suc<successors.size() ; suc++ ){
+        cut_set.emplace(job_no,successors[suc]);
+    }
+    return cut_set;
+}
 // update_priority_nodes
 // @arg infor_loader::no_job_t 
 // @arg cut_set_t
@@ -454,7 +483,9 @@ evaluate_result_t ssgs::evaluate( std::vector<job::number_t> topological_sort_re
     infor_loader::no_job_t all_jobs_evaluate = get_all_jobs();
     job::resource_bulk_t limited_resources = get_resources();
     // initialization
+    // store information for jobs with earliest_start time && earliest_finish time
     std::map<job::number_t,job_scheduled_infor> schedule_infor;
+    // store information for current job
     job_scheduled_infor jsi;
     res_time_t res_use_scheduled_ls;
     for(job::resource_elem_t it:limited_resources)
@@ -537,7 +568,7 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
             time_line::time_bulk_t time_bulk_for_split;
             time_line::date_type walking_time = es;
             size_t cur_resource_size = cur_job.get_required_resources().at(it->first);
-            for(int i=0;i<tmp_time_bulk.size();i++)
+            for(int i=0;i<tmp_time_bulk.size();i++)// loop for each kind of resource
             {
                 if(walking_time>tmp_time_bulk[i].get_st() )
                 {
@@ -697,7 +728,7 @@ void ssgs::ssgs_sort(   size_t pop_size=20,
 }
 // ssgs-sort version 0.2
 // change between last version: 
-//   -->delete individual after a generation 
+//   -->delete individual after a generation <<- not good! 将不好的基因也接受
 //   -->apative mutate-rate
 // @arg size_t
 // @arg int
@@ -716,10 +747,12 @@ void ssgs::ssgs_sort_2(   size_t pop_size=20,
     population_t pop = init_pop(pop_size,max);
     for(int i=0;i<generation_size;i++)
     {
+        population_t children_pop;
         // adaptive mutate-rate
+        double mutate_rate = 0.5 -((double)i)/(double)generation_size;
         print_line(i+1,generation_size);
         log.wirte_in(std::string("->>generation : ")+ std::to_string(i+1) +" <<-");
-        for(int j=0;j<5;j++)
+        for(int j=0;j<pop_size/2;j++)
         {
             // crossover
             population_t crossover_parents = select_parents(pop);
@@ -728,9 +761,11 @@ void ssgs::ssgs_sort_2(   size_t pop_size=20,
             for(population_t::value_type c:children)
             {
                 mutate(c,mutate_rate,6);
-                add_children_to_pop(pop,c);
+                add_children_to_pop(children_pop,c);
             }
         }
+        for(population_t::value_type c:children_pop)
+            add_children_to_pop(pop,c);
         pop_sort(pop);
         for(int i=0; i<pop.size()-pop_size ; i++)
         {
@@ -897,7 +932,7 @@ ssgs::population_t ssgs::crossover(population_t parents ,double crossover_rate)
     srand((unsigned)time(NULL));
     population_t::value_type c1 = parents[0];
     population_t::value_type c2 = parents[1];
-    for(int i=0; i<parents[0].size() ; i++)
+    for(int i=1; i<parents[0].size()-1 ; i++)
         if(get_rand_val_0_to_1()<crossover_rate)
         {
             c1[i] = parents[1][i];
@@ -917,7 +952,7 @@ ssgs::population_t ssgs::crossover_2(population_t parents , double crossover_rat
     population_t::value_type c1 = parents[0];
     population_t::value_type c2 = parents[1];
     int gene_len = parents[0].size();
-    for(int i=0; i<gene_len ; i++)
+    for(int i=1; i<gene_len-1 ; i++)
         if(get_rand_val_0_to_1()<crossover_rate)
         {
             c1[i] = parents[1][i+rand()%(gene_len-i)];
@@ -941,7 +976,7 @@ void ssgs::mutate(  priorityBG& ind,
     for(int i=0 ; i<neighborhood_width ; i++)
     {
         int neighborhood_loc = -1;
-        for(int j=0;j<neighborhood[i].size() && neighborhood_loc<0;j++)
+        for(int j=1;j<neighborhood[i].size()-1 && neighborhood_loc<0;j++)
             if(get_rand_val_0_to_1()<mutate_rate)
                 neighborhood_loc = j;
         if(neighborhood_loc>0)
