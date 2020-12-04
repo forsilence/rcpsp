@@ -567,16 +567,7 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
     for(res_time_t::iterator it=res_sl.begin();it!=res_sl.end();it++){
         if(!it->second.empty())
         {
-            // time_line::time_bulk_t::reverse_iterator tmp_date = it->second.rbegin();
             time_line::time_bulk_t tmp_time_bulk ;
-            // while(tmp_date != it->second.rend() && es < tmp_date->get_et()){
-            //     ++tmp_date;
-            // }
-            // while(tmp_date != it->second.rbegin()){
-            //     if((es+cur_job.get_duration())>(--tmp_date)->get_st()){
-            //         tmp_time_bulk.push_back(*tmp_date);
-            //     }
-            // }
             time_line::time_bulk_t::iterator tmp_date_new = it->second.begin();
             while(tmp_date_new != it->second.end() && es >= tmp_date_new->get_et()){
                 ++tmp_date_new;
@@ -678,30 +669,6 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
                 *keep_iter_loc = time_bulk_for_split[extra_size];
                 ++keep_iter_loc;
             }
-            // time_line::time_bulk_t::iterator front = it->second.begin();
-            // time_line::time_bulk_t::iterator back  = it->second.begin();
-            // for(;front!=it->second.end() && back != it->second.end();)
-            // {
-            //     if(front->get_et()<=es || back->get_st() < es+cur_job.get_duration() )
-            //     {
-            //         if(front->get_et() <= es )
-            //             front++;
-            //         if(back->get_st() < es+cur_job.get_duration())
-            //             back++;
-            //     }
-            //     else break;
-            // }
-            // while(back!=it->second.end()){
-            //     time_bulk_for_split.push_back(*(back++));
-            // }
-            // time_line::time_bulk_t::iterator tmp_split = time_bulk_for_split.begin();
-            // int time_bulk_walk_loc = 0;
-            // for(;front!=it->second.end() && time_bulk_walk_loc < time_bulk_for_split.size(); front++,time_bulk_walk_loc++){
-            //     *front = time_bulk_for_split[time_bulk_walk_loc];
-            // }
-            // while(time_bulk_walk_loc<time_bulk_for_split.size()){
-            //     it->second.push_back(time_bulk_for_split[time_bulk_walk_loc++]);
-            // }
         }
         else
         {
