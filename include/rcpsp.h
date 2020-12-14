@@ -230,6 +230,11 @@ class ssgs
                         double ,
                         double ,
                         priorityBG::priority_t);
+        // void ssgs_sort_3(size_t ,
+        //                     int ,
+        //                     double ,
+        //                     double ,
+        //                     priorityBG::priority_t);
         population_t init_pop(  size_t pop_size,
                                 priorityBG::priority_t max);
         void pop_sort(population_t& );
@@ -238,6 +243,7 @@ class ssgs
         population_t select_parents(population_t pop);
         population_t crossover(population_t parents,double crossover_rate);
         population_t crossover_2(population_t parents,double crossover_rate);
+        population_t crossover_3(population_t parents,double crossover_rate);
         void mutate(priorityBG& ind,double mutate_rate,int neighborhood_with = 4);
         int roulette_wheel(std::vector<time_line::date_type> );
         void add_children_to_pop(population_t& pop,population_t::value_type c);
@@ -280,6 +286,7 @@ class evaluate_result_t
         job_scheduled_infor get_jsi() const { return jsi; }
         void print(std::ostream&);
         std::string scheduled_infor_to_string();
+        std::string resources_time_lineToString();
     private:
         job_scheduled_infor jsi;
         ssgs::res_time_t resources_time_line;

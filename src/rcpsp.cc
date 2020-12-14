@@ -6,6 +6,7 @@
 # include<ctime>
 # include<cstdlib>
 # include<numeric>
+# include<cmath>
 # include"../include/rcpsp.h"
 # include"../include/_M_processing_line.h"
 
@@ -284,6 +285,21 @@ std::string evaluate_result_t::scheduled_infor_to_string()
     }
     return str;
 }
+// resources_time_lineToString
+// @return std::string
+std::string evaluate_result_t::resources_time_lineToString()
+{
+    std::string str;
+    for(auto res:resources_time_line){
+        str += std::to_string(res.first) + "\n";
+        for(auto timeLine:res.second){
+            str += std::to_string(timeLine.get_st()) + " " + 
+                    std::to_string(timeLine.get_et()) + " " +
+                    std::to_string(timeLine.get_holding_resource_size()) +"\n";
+        }
+    }
+    return str;
+}
 // >>> ssgs <<<
 // @arg std::string
 ssgs::ssgs(std::string project_file_path):ssgs()
@@ -456,11 +472,12 @@ void ssgs::update_priority_nodes(   infor_loader::no_job_t sorted_nodes,
     for(cut_set_elem_t it:cut_set)
     {
         infor_loader::no_job_t::iterator job_iterator = free_nodes.find(it.second);
-        if(job_iterator!=free_nodes.end())
-        if(eligible(sorted_nodes,job_iterator->second))
-        {
-            priority_quene.emplace(job_iterator->first,job_iterator->second);
-            free_nodes.erase(job_iterator);
+        if(job_iterator!=free_nodes.end()){
+            if(eligible(sorted_nodes,job_iterator->second))
+            {
+                priority_quene.emplace(job_iterator->first,job_iterator->second);
+                free_nodes.erase(job_iterator);
+            }
         }
     }
 }
@@ -542,29 +559,28 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
     // job cur_job = all_jobs.at(jsi.get_no());//repeat find ,wast time
     job cur_job = job_iterator->second;
     // find current job earlies start time
-    for(res_time_t::iterator it=res_sl.begin();it!=res_sl.end();it++)
+    for(res_time_t::iterator it=res_sl.begin();it!=res_sl.end();it++){
+        if(cur_job.get_required_resources().at(it->first)!=0)
         if(!it->second.empty())
         {
-            time_line::time_bulk_t::reverse_iterator tmp_date = it->second.rbegin();
-            // find the earliest start time ,then start consider resource constrain 
-            while(tmp_date != it->second.rend() && es < tmp_date->get_et()){
+            time_line::time_bulk_t::iterator tmp_date =it->second.begin();
+            while(tmp_date !=it->second.end() && es>=tmp_date->get_et()){
                 ++tmp_date;
             }
-            // considering the resource constrain
-            while(tmp_date != it->second.rbegin()){
-                if((es+cur_job.get_duration())>(--tmp_date)->get_st()){
-                    if (tmp_date->get_holding_resource_size() > 
-                        get_resources().at(it->first)-cur_job.get_required_resources().at(it->first) ){
-                            es = tmp_date->get_et();
-                        } 
-                }
+            while(tmp_date != it->second.end() && es + cur_job.get_duration() > tmp_date->get_st()){
+                if(tmp_date->get_holding_resource_size()+cur_job.get_required_resources().at(it->first) > 
+                    get_resources().at(it->first) && es < tmp_date->get_et() ){
+                        es = tmp_date->get_et();
+                    }
+                ++tmp_date;
             }
         }
-
+    }
     jsi.set_es(es);
     jsi.set_ef(es+cur_job.get_duration());
     // push time line to res_sl
     for(res_time_t::iterator it=res_sl.begin();it!=res_sl.end();it++){
+        if(cur_job.get_required_resources().at(it->first)!=0)
         if(!it->second.empty())
         {
             time_line::time_bulk_t tmp_time_bulk ;
@@ -588,15 +604,31 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
             {
                 if(walking_time>tmp_time_bulk[i].get_st() )
                 {
-                    time_line behind_time = tmp_time_bulk[i];
-                    time_line forward_time = tmp_time_bulk[i];
-                    behind_time.set_et(walking_time);
-                    forward_time.set_st(walking_time);
-                    forward_time.set_holding_resource_size(
-                                                        forward_time.get_holding_resource_size()+cur_resource_size);
-                    time_bulk_for_split.push_back(behind_time);
-                    time_bulk_for_split.push_back(forward_time);
-                    walking_time = forward_time.get_et();
+                    if(es+cur_job.get_duration() < tmp_time_bulk[i].get_et()){
+                        time_line behind_time = tmp_time_bulk[i];
+                        time_line middle_time = tmp_time_bulk[i];
+                        time_line forward_time = tmp_time_bulk[i];
+                        behind_time.set_et(walking_time);
+                        middle_time.set_st(walking_time);
+                        middle_time.set_et(es+cur_job.get_duration());
+                        middle_time.set_holding_resource_size(middle_time.get_holding_resource_size() + cur_resource_size);
+                        forward_time.set_st(es+cur_job.get_duration());
+                        time_bulk_for_split.push_back(behind_time);
+                        time_bulk_for_split.push_back(middle_time);
+                        time_bulk_for_split.push_back(forward_time);
+                        walking_time = forward_time.get_et();
+                    }else{
+                        time_line behind_time = tmp_time_bulk[i];
+                        time_line forward_time = tmp_time_bulk[i];
+                        behind_time.set_et(walking_time);
+                        forward_time.set_st(walking_time);
+                        forward_time.set_holding_resource_size(
+                                                            forward_time.get_holding_resource_size()+cur_resource_size);
+                        time_bulk_for_split.push_back(behind_time);
+                        time_bulk_for_split.push_back(forward_time);
+                        walking_time = forward_time.get_et();
+                    }
+                    
                 }
                 else if(walking_time == tmp_time_bulk[i].get_st())
                 {
@@ -604,8 +636,8 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
                     {
                         time_line behind_time = tmp_time_bulk[i];
                         time_line forward_time = tmp_time_bulk[i];
-                        behind_time.set_et(walking_time);
-                        forward_time.set_st(walking_time);
+                        behind_time.set_et(es+cur_job.get_duration());
+                        forward_time.set_st(es+cur_job.get_duration());
                         behind_time.set_holding_resource_size(
                                                             forward_time.get_holding_resource_size()+cur_resource_size);
                         walking_time = forward_time.get_et();
@@ -617,10 +649,12 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
                         tmp_time_bulk[i].set_holding_resource_size(
                                             tmp_time_bulk[i].get_holding_resource_size()+cur_resource_size);
                         time_bulk_for_split.push_back(tmp_time_bulk[i]);
+                        walking_time = tmp_time_bulk[i].get_et();
                     }
                 }
                 else
                 {
+                    // 3 conditions ,but only handle two
                     if((es+cur_job.get_duration()) < tmp_time_bulk[i].get_et())
                     {
                         time_line behind_time = tmp_time_bulk[i];
@@ -637,7 +671,7 @@ void ssgs::set_time(infor_loader::no_job_t all_jobs__,
                         time_bulk_for_split.push_back(forward_time);
                         walking_time = forward_time.get_et();
                     }
-                    else 
+                    else
                     {
                         time_line behind_time = tmp_time_bulk[i];
                         time_line forward_time = tmp_time_bulk[i];
@@ -762,7 +796,7 @@ void ssgs::ssgs_sort_2(   size_t pop_size=20,
         {
             // crossover
             population_t crossover_parents = select_parents(pop);
-            population_t children = crossover_2(crossover_parents,crossover_rate);
+            population_t children = crossover(crossover_parents,crossover_rate);
             // mutate
             for(population_t::value_type c:children)
             {
@@ -964,6 +998,31 @@ ssgs::population_t ssgs::crossover_2(population_t parents , double crossover_rat
             c1[i] = parents[1][i+rand()%(gene_len-i)];
             c2[i] = parents[0][i+rand()%(gene_len-i)];
         }
+    c1.set_result(objective_function(c1));
+    c2.set_result(objective_function(c2));
+    return population_t{c1,c2};
+}
+// crossover_3
+// @arg ssgs::population_t
+// @arg double
+// @return ssgs::population_t
+ssgs::population_t ssgs::crossover_3(population_t parents , double crossover_rate)
+{
+    srand((unsigned)time(NULL));
+    population_t::value_type c1 = parents[0];
+    population_t::value_type c2 = parents[1];
+    int gene_len = parents[0].size();
+    int crossover_location1 = rand()%gene_len;
+    int crossover_location2 = crossover_location1;
+    while(crossover_location1 == crossover_location2){
+        crossover_location2 = rand() % gene_len;
+    }
+    for(int gene=std::min(crossover_location1,crossover_location2) ; 
+        gene<std::max(crossover_location1,crossover_location2) ;
+        ++gene){
+        c1[gene] = parents[1][gene];
+        c2[gene] = parents[0][gene];
+    }
     c1.set_result(objective_function(c1));
     c2.set_result(objective_function(c2));
     return population_t{c1,c2};
